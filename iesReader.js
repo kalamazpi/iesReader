@@ -400,13 +400,11 @@ rl.on("close", function() {
     console.log(tempString);
 
     // Write out candelaValuesTable:
-    // Write header:
-    console.log(lightingArrays[2]);
-    // blank,verticalAngle[0],verticalAngle[1],...
+    // candelaValuesTable,verticalAngle[0],verticalAngle[1],...
     // horizontalAngle[0],[0][0],[0][1]...
     // horizontalAngle[1],[1][0],[1][1]...
     // Print row of vertical angles:
-    tempString = ""; // account for 'blank' in upper left corner
+    tempString = lightingArrays[2];
     for (let i = 0; i < iesObject.unmarkedFields.numberOfVerticalAngles; i += 1) {
         tempString += "," + iesObject.verticalAnglesArray[i];
     }
