@@ -1,0 +1,29 @@
+{
+  "name": "iesreader",
+  "version": "1.0.0",
+  "description": "IES file reader/manipulator/writer in javascript. This version reads an IES file and generates a CSV file compatible with Excel.",
+  "main": "iesReader.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kalamazpi/iesReader.git"
+  },
+  "author": "Brent Wilson",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kalamazpi/iesReader/issues"
+  },
+  "homepage": "https://github.com/kalamazpi/iesReader#readme",
+  "devDependencies": {
+    "eslint": "^4.18.1",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.9.0",
+    "eslint-plugin-react": "^7.7.0"
+  },
+  "dependencies": {
+    "ajv": "^6.1.1",
+    "ajv-keywords": "^3.1.0"
+  }
+}
