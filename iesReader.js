@@ -42,7 +42,7 @@ const unmarkedFields = ["numOfLamps", "lumensPerLamp", "multiplier", "numberOfVe
     "numberOfHorizontalAngles", "photometricType", "unitsType", "width",
     "length", "height", "ballastFactor", "futureUse", "inputWatts"];
 
-//const lightingArrays = ["verticalAnglesArray", "horizontalAnglesArray", "candelaValuesTable"];
+const lightingArrays = ["verticalAnglesArray", "horizontalAnglesArray", "candelaValuesTable"];
 
 let iesObject = {version: supportedVersions[0], 
     keywords:{TEST: "", TESTLAB: "", ISSUEDATE: "", MANUFAC: "", LUMCAT: "", 
@@ -320,7 +320,110 @@ rl.on("line", function(line) {
     }
 });
 
-// After the file has been read in, operate!
+// After the file has been read in, write CSV file.
+rl.on("close", function() {
+    // do something!
+    console.debug("Finished parsing input file.");
+    // Write out the IES file
+    // First line is the IES file version
+    console.log("IES file version," + iesObject.version);
+
+    // next we write out each of the keywords in any order
+    // TODO: Need to mask/escape any ',' in the keyword values to avoid Excel breaking them into
+    //  multiple columns.
+    let tempKeys = Object.keys(iesObject.keywords);
+    for (let i in tempKeys) {
+        let tempString = "[" + tempKeys[i] + "],";
+        // Handle [MORE] keywords
+        if (tempKeys[i].endsWith("MORE")) {
+            for (let j in iesObject.keywords[tempKeys[i]]) {
+                tempString = "[MORE]," + iesObject.keywords[tempKeys[i]][j];
+                console.log(tempString);
+            }
+        } else {
+            // Normal keywords.
+            // TODO: Print Keywords in order that they were originally read or the order of 
+            //  the standardKeywords[] array.
+            tempString += iesObject.keywords[tempKeys[i]];
+            console.log(tempString);
+        }
+    }
+    // Handle TILT
+    // TODO: Add support for TILT=filename
+    console.log("TILT=" + iesObject.tiltFields.TILT);
+    if (iesObject.tiltFields.TILT === "INCLUDE") {
+        // Write out TILT unmarked fields in order
+        // Handle lampToLuminaireGeometry and numberOfTiltAngles
+        console.log(tiltFields[0] + "," + iesObject.tiltFields[tiltFields[0]]);
+        console.log(tiltFields[1] + "," + iesObject.tiltFields[tiltFields[1]]);
+        // Handle tiltAngles. Write each separated by comma.
+        // TODO: Handle multi-line tiltAngles
+        let tempString = tiltFields[2];
+        for (let i = 0; i < iesObject.tiltFields.tiltAngles.length; i += 1) {
+            tempString += "," + iesObject.tiltFields.tiltAngles[i];
+        }
+        console.log (tempString);
+        // Handle multiplyingFactors. Write each separated by comma.
+        // TODO: Handle multi-line multiplyingFactors
+        tempString = tiltFields[3];
+        for (let i = 0; i < iesObject.tiltFields.multiplyingFactors.length; i += 1) {
+            tempString += "," + iesObject.tiltFields.multiplyingFactors[i];
+        }
+        console.log (tempString);
+    } else if (iesObject.tiltFields.TILT === "NONE") {
+        // Nothing more to do here.
+    } else {
+        // TODO: Add support for TILT=filename and error checking here
+        console.error("Error.  Unsupported TILT condition on file write.");
+        console.error("Continuing anyway...");
+    }
+
+    // Write out unmarked fields in order, one per line
+    let tempString = iesObject.unmarkedFields[unmarkedFields[0]];
+    for (let i in unmarkedFields) {
+        tempString = unmarkedFields[i] + "," + iesObject.unmarkedFields[unmarkedFields[i]];
+        console.log(tempString);
+    }
+
+    // Write out verticalAngles, all on one line
+    tempString = lightingArrays[0];
+    for (let i = 0; i < iesObject.verticalAnglesArray.length; i += 1) {
+        tempString += "," + iesObject.verticalAnglesArray[i];
+    }
+    console.log(tempString);
+
+    // Write out horizontalAngles, all on one line
+    tempString = lightingArrays[1];
+    for (let i = 0; i < iesObject.horizontalAnglesArray.length; i += 1) {
+        tempString += "," + iesObject.horizontalAnglesArray[i];
+    }
+    console.log(tempString);
+
+    // Write out candelaValuesTable:
+    // Write header:
+    console.log(lightingArrays[2]);
+    // blank,verticalAngle[0],verticalAngle[1],...
+    // horizontalAngle[0],[0][0],[0][1]...
+    // horizontalAngle[1],[1][0],[1][1]...
+    // Print row of vertical angles:
+    tempString = ""; // account for 'blank' in upper left corner
+    for (let i = 0; i < iesObject.unmarkedFields.numberOfVerticalAngles; i += 1) {
+        tempString += "," + iesObject.verticalAnglesArray[i];
+    }
+    console.log(tempString);
+    // Print row of Candela info, starting with horizontal Angle
+    for (let horIndex = 0; horIndex < iesObject.unmarkedFields.numberOfHorizontalAngles; horIndex += 1) {
+        tempString = iesObject.horizontalAnglesArray[horIndex];
+        for (let verIndex = 0; verIndex < iesObject.unmarkedFields.numberOfVerticalAngles; verIndex += 1) {
+            tempString += "," + iesObject.candelaValuesTable[horIndex][verIndex];
+        }
+        console.log(tempString);
+    }
+    console.debug("Finished.");
+});
+
+/* This function writes an IES file
+// After the file has been read in, write an IES file!
 rl.on("close", function() {
     // do something!
     console.debug("Finished parsing input file.");
@@ -450,3 +553,4 @@ rl.on("close", function() {
     }
     console.debug("Finished.");
 });
+*/
