@@ -1,10 +1,6 @@
 // A simple parser and manipulator for IES lighting files.
-// This file is designed to map IES files to CSV files that can be easily be manipulated in Excel
-// as an editor tool.  It performs limited validation on the IES file.
-//
-// Limitations: 
-// * This version does not support TILT=filename.
-// * This version only supports IESNA:LM-63-2002.  Other versions may work by accident.
+
+
 
 const fs = require("fs");
 const readline = require("readline");
@@ -14,6 +10,8 @@ const supportedVersions = ["IESNA:LM-63-2002"];
 let instream = fs.createReadStream(process.argv[2]);
 let outstream = new stream();
 let rl = readline.createInterface(instream, outstream);
+
+console.debug("Processing file: ", process.argv[2]);
 
 const parserStates = {
     version: 0, 
@@ -37,8 +35,8 @@ const standardKeywords = ["TEST", "TESTLAB", "TESTDATE", "NEARFIELD", "MANUFAC",
     "DISTRIBUTION", "FLASHAREA", "COLORCONSTANT", "LAMPPOSITION",
     "ISSUEDATE", "OTHER", "SEARCH", "MORE"];
 
-//const tiltFields = ["lampToLuminaireGeometry", "numberOfTiltAngles", "tiltAngles",
-//    "multiplyingFactors"];
+const tiltFields = ["lampToLuminaireGeometry", "numberOfTiltAngles", "tiltAngles",
+    "multiplyingFactors"];
 
 const unmarkedFields = ["numOfLamps", "lumensPerLamp", "multiplier", "numberOfVerticalAngles",
     "numberOfHorizontalAngles", "photometricType", "unitsType", "width",
@@ -86,6 +84,8 @@ let columnIndex = 0;
 let rowIndex = 0;
 // 'lastKey' is used to map [MORE] keywords to their associated line.
 let lastKey = "";
+
+// TODO: examine extension of input file name to determine the direction of the translation.
 
 // Process each line of thie file one line at a time.
 rl.on("line", function(line) {
@@ -181,7 +181,7 @@ rl.on("line", function(line) {
             // Tilt fields are one field per line except for tiltAngles and multilyingFactors
             //  which can be multiple lines.
             iesObject.tiltFields.numberOfTiltAngles = Number(line);
-            parserState = parserStates.TiltAngles;
+            parserState = parserStates.tiltAngles;
             break;
         case parserStates.tiltAngles:
             // Process "tiltAngles" array
@@ -307,6 +307,7 @@ rl.on("line", function(line) {
                 }
             }
             break;
+            // TODO: Validate counts for horizontalAngles, verticalAngles, and candelaValuesTable
         case parserStates.extraLines:
             // Process any extra lines in the file
             console.log("Extra line found at ", lineNumber);
@@ -322,19 +323,18 @@ rl.on("line", function(line) {
 // After the file has been read in, operate!
 rl.on("close", function() {
     // do something!
-    console.log("Finished parsing input file.");
+    console.debug("Finished parsing input file.");
     // Write out the IES file
     // First line is the IES file version
     console.log(iesObject.version);
 
     // next we write out each of the keywords in any order
-    // TODO: Handle MORE arrays.
     let tempKeys = Object.keys(iesObject.keywords);
-    for (i in tempKeys) {
+    for (let i in tempKeys) {
         let tempString = "[" + tempKeys[i] + "] ";
         // Handle [MORE] keywords
         if (tempKeys[i].endsWith("MORE")) {
-            for (j in iesObject.keywords[tempKeys[i]]) {
+            for (let j in iesObject.keywords[tempKeys[i]]) {
                 tempString = "[MORE] " + iesObject.keywords[tempKeys[i]][j];
                 console.log(tempString);
             }
@@ -346,4 +346,107 @@ rl.on("close", function() {
             console.log(tempString);
         }
     }
+    // Handle TILT
+    // TODO: Add support for TILT=filename
+    console.log("TILT=" + iesObject.tiltFields.TILT);
+    if (iesObject.tiltFields.TILT === "INCLUDE") {
+        // Write out TILT unmarked fields in order
+        // Handle lampToLuminaireGeometry and numberOfTiltAngles
+        console.log(iesObject.tiltFields[tiltFields[0]]);
+        console.log(iesObject.tiltFields[tiltFields[1]]);
+        // Handle tiltAngles. Write each separated by space, then remove last space.
+        // TODO: Handle multi-line tiltAngles
+        let tempString = "";
+        for (let i in iesObject.tiltFields.tiltAngles) {
+            tempString += iesObject.tiltFields.tiltAngles[i] + " ";
+        }
+        tempString = tempString.trim();        
+        console.log (tempString);
+        // Handle multiplyingFactors. Write each separated by space, then remove last space.
+        // TODO: Handle multi-line multiplyingFactors
+        tempString = "";
+        for (let i in iesObject.tiltFields.multiplyingFactors) {
+            tempString += iesObject.tiltFields.multiplyingFactors[i] + " ";
+        }
+        tempString = tempString.trim();        
+        console.log (tempString);
+    } else if (iesObject.tiltFields.TILT === "NONE") {
+        // Nothing more to do here.
+    } else {
+        // TODO: Add support for TILT=filename and error checking here
+        console.error("Error.  Unsupported TILT condition on file write.");
+        console.error("Continuing anyway...");
+    }
+
+    // Write out unmarked fields (first 10) in order
+    let tempString = "";
+    for (let i = 0; i < 10; i += 1) {
+        tempString += iesObject.unmarkedFields[unmarkedFields[i]] + " ";
+    }
+    // trim last space
+    tempString = tempString.trim();
+    // write them out
+    console.log(tempString);
+    // Write out remaining 3 unmarked fields in order
+    tempString = "";
+    for (let i = 10; i < 13; i += 1) {
+        tempString += iesObject.unmarkedFields[unmarkedFields[i]] + " ";
+    }
+    // trim last space
+    tempString = tempString.trim();
+    // write them out
+    console.log(tempString);
+
+    // Write out verticalAngles, no more than 120 chars per line
+    tempString = "";
+    for (let i = 0; i < iesObject.verticalAnglesArray.length; i += 1) {
+        tempString += iesObject.verticalAnglesArray[i] + " ";
+        // TODO: Move '120' to a constant at top of file.
+        if (tempString.length > 120) {
+            tempString = tempString.trim();
+            console.log(tempString);
+            tempString = "";
+        }
+    }
+    // Handle last short line
+    if (tempString.length > 0) {
+        tempString = tempString.trim();
+        console.log(tempString);
+    }
+    // Write out horizontalAngles, no more than 120 chars per line
+    tempString = "";
+    for (let i = 0; i < iesObject.horizontalAnglesArray.length; i += 1) {
+        tempString += iesObject.horizontalAnglesArray[i] + " ";
+        // TODO: Move '120' to a constant at top of file.
+        if (tempString.length > 120) {
+            tempString = tempString.trim();
+            console.log(tempString);
+            tempString = "";
+        }
+    }
+    // Handle last short line
+    if (tempString.length > 0) {
+        tempString = tempString.trim();
+        console.log(tempString);
+    }
+    // Write out candelaValuesTable, no more than 120 chars per line
+    tempString = "";
+    for (let horIndex = 0; horIndex < iesObject.unmarkedFields.numberOfHorizontalAngles; horIndex += 1) {
+        for (let verIndex = 0; verIndex < iesObject.unmarkedFields.numberOfVerticalAngles; verIndex += 1) {
+            tempString += iesObject.candelaValuesTable[horIndex][verIndex] + " ";
+            // TODO: Move '120' to a constant at top of file.
+            if (tempString.length > 120) {
+                tempString = tempString.trim();
+                console.log(tempString);
+                tempString = "";
+            }
+        }
+        // Handle last short line for this row
+        if (tempString.length > 0) {
+            tempString = tempString.trim();
+            console.log(tempString);
+            tempString = "";
+        }
+    }
+    console.debug("Finished.");
 });
