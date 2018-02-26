@@ -25,6 +25,13 @@
             "program": "${workspaceFolder}\\iesReader.js",
             "args": ["GLH-test.ies"]
         },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Program Read CSV",
+            "program": "${workspaceFolder}\\iesReader.js",
+            "args": ["GLH_tilt_excel.csv"]
+        }
         
     ]
 }
